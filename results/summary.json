@@ -1,0 +1,16 @@
+{
+ "n_participants": 31,
+ "n_scored_epochs": 26773,
+ "quality": {
+  "pct_hr_sparse": 3.5894371194860497,
+  "pct_hr_implausible": 0.0,
+  "pct_hr_jump": 0.2726627572554439,
+  "pct_acc_gap": 5.0199828185111866,
+  "pct_unreliable": 5.4719306764277444,
+  "n_epochs": 26773,
+  "n_participants": 31,
+  "n_participants_gt10pct_unreliable": 3
+ },
+ "hypnogram_participant": "4018081",
+ "runtime_min": 40.0
+}
