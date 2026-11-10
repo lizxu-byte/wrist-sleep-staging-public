@@ -5,8 +5,7 @@ epoch-level **data-quality gate**. A small, tested Python package (`sleepstage`)
 reproducible script that runs leave-one-subject-out (LOSO) evaluation on the public
 PhysioNet *sleep-accel* dataset (Apple Watch + PSG, Walch et al., 2019).
 
-> Status: research code for a portfolio / methods exploration. Not a medical device, not validated
-> for clinical use.
+> Research code; not validated for clinical use.
 
 ## Motivation
 
@@ -27,9 +26,9 @@ This repository therefore asks two questions on an open dataset:
    stage**? Two things are measured: epoch-level agreement, and night-level estimates (total sleep
    time, sleep efficiency, WASO) when flagged epochs are imputed or excluded.
 
-## Dataset (verified on the PhysioNet page, 2026-11-01)
+## Dataset
 
-| Item | Verified value |
+| Item | Description |
 |---|---|
 | Title | *Motion and heart rate from a wrist-worn wearable and labeled sleep from polysomnography* |
 | Version | 1.0.0 (published 8 Oct 2019; only version listed) |
@@ -41,13 +40,12 @@ This repository therefore asks two questions on an open dataset:
 | Files | `motion/<id>_acceleration.txt` (`t x y z`, space-separated), `heart_rate/<id>_heartrate.txt` (`t,hr`, comma-separated), `labels/<id>_labeled_sleep.txt` (`t stage`), plus `steps/` (not used). `t` = seconds since PSG start |
 | Label coding (documented) | 0 wake, 1 N1, 2 N2, 3 N3, 5 REM; 30 s epochs |
 
-What I found in the files (`scripts/download_data.py` checks every file against the published
-`SHA256SUMS.txt`):
+The released files have the following characteristics. `scripts/download_data.py` checks every
+file against the published `SHA256SUMS.txt`.
 
-* **Undocumented codes.** Two label codes occur that the page does not describe. `-1` (438 epochs)
-  is treated as *unscored*. `4` occurs in 356 epochs from three participants and is treated as
-  **N3**: stage 4 of the older Rechtschaffen & Kales scheme is merged into N3 under AASM rules.
-  This is an assumption; please review.
+* **Undocumented codes.** Undocumented label code `4` (356 epochs from three participants) is
+  mapped to **N3** based on the historical sleep-stage convention, while code `-1` (438 epochs)
+  is excluded as unscored. The mapping of code `4` is an analysis assumption.
 * **Data outside the scored window.** HR and motion files also contain data from before the PSG
   night (negative `t`, up to several days). Everything outside the scored window is discarded.
 * **Sampling.** Accelerometer rates are about 50 Hz for most participants, but 10, 33 and
@@ -117,11 +115,10 @@ Because the Apple Watch reports *processed* HR, not the PPG waveform, true PPG s
 be assessed here. The gate only sees the symptoms that reach the HR stream.
 
 **Models (`models.py`).**
-* Logistic regression: standardised features, `class_weight="balanced"`.
-* Random forest: 300 trees, `min_samples_leaf=20`, `class_weight="balanced_subsample"`.
 
-Gradient boosting was left out: with 31 participants it adds tuning choices that cannot be
-validated well. Predictions use the default arg-max decision rule; no threshold tuning.
+The models include logistic regression with standardised features and balanced class weights,
+and a random forest with 300 trees, a minimum leaf size of 20, and balanced subsample weights.
+Predictions use the arg-max decision rule without threshold tuning.
 
 **Evaluation (`evaluate.py`).** All results are LOSO: 31 folds, each training on 30 participants
 and predicting the held-out one. Metrics:
@@ -146,7 +143,9 @@ strategies:
 3. `exclude`: unreliable epochs are dropped, so TST counts only reliable sleep epochs and SE uses
    only reliable epochs as its denominator.
 
-## Results (from `python scripts/run_all.py`, full dataset, 31 participants)
+## Results
+
+The full-dataset analysis uses 31 participants and is run with `python scripts/run_all.py`.
 
 ### Data quality
 
@@ -252,16 +251,14 @@ mark unreliable epochs.
 
 ## Comparison with Walch et al. (2019)
 
-The published numbers below were checked against the full text of the paper (PMC6930135,
-Tables 2–6).
-
 | | Walch et al. 2019 (Apple Watch, motion + HR + clock proxy) | This repo (RF, LOSO) |
 |---|---|---|
 | Sleep/wake, best | Neural net: accuracy 0.901, wake 0.596, sleep 0.93, κ 0.449 (Table 5). Random forest: κ 0.433 at sleep 0.93 / 0.444 at 0.95 (Table 4) | accuracy 0.912, wake 0.634, sleep 0.940, κ 0.518 |
 | Wake/NREM/REM | Best κ 0.302 (random forest), neural net κ 0.277 with best accuracy 0.723 (Table 6) | κ 0.470, accuracy 0.740 |
 | 4-class | Not reported | κ 0.411 |
 
-**These numbers are not directly comparable.** The differences are:
+Evaluation protocols differ in subject splits, classification thresholds, feature sets and label
+handling. These differences are detailed below.
 
 * **Splits.** The paper uses Monte Carlo cross-validation: 50 (sleep/wake) or 20 (three-class)
   random splits with about 70 % of subjects for training, results averaged. This repo uses LOSO,
@@ -278,13 +275,8 @@ Tables 2–6).
 * **Labels.** The paper's handling of unscored epochs and of code `4` is not described. Here, `4`
   is treated as N3 and `-1` epochs are excluded.
 
-The higher κ here is *plausibly* driven by:
-* per-night normalisation and context windows;
-* the larger training sets of LOSO;
-* the time feature, whose contribution is shown in the ablation. Without it, κ is still 0.483
-  for sleep/wake and 0.440 for three-class, and motion alone gives 0.466 for sleep/wake.
-
-None of these causes was isolated beyond the ablation, so this is not a claim of a better method.
+In the feature ablation, removing the time-since-recording-start feature reduces pooled κ from
+0.518 to 0.483 for sleep/wake classification and from 0.470 to 0.440 for three-class classification.
 
 ## Limitations
 
@@ -363,9 +355,6 @@ results/          aggregated tables (.csv/.md) and figures (.png)
 * Rosenberg, R. S., & Van Hout, S. (2013). The American Academy of Sleep Medicine inter-scorer
   reliability program: sleep stage scoring. *Journal of Clinical Sleep Medicine*, 9(1), 81–87.
   https://doi.org/10.5664/jcsm.2350
-
-All DOIs were resolved via Crossref/DataCite. The numbers quoted from Walch et al., Danker-Hopfe
-et al. and Rosenberg & Van Hout were checked against the full text or the PubMed abstract.
 
 ## Licence
 
